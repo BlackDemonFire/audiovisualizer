@@ -22,9 +22,11 @@ class MyGame(arcade.Window):
         # Call the parent class and set up the window
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, update_rate=1/20)
         start = time()
-        soundfile = sys.argv[1]
-        if not soundfile:
+        soundfile = ""
+        if len(sys.argv) < 2:
             soundfile = "sound.wav"
+        else:
+            soundfile = sys.argv[1]
         arcade.set_background_color(arcade.csscolor.BLACK)
         self.music = arcade.Sound(soundfile)
         AUDIO_TIME_SERIES, SAMPLING_RATE = librosa.load(soundfile, sr=48000)
@@ -38,12 +40,12 @@ class MyGame(arcade.Window):
         self.rectcolor = arcade.csscolor.LIME
         self.circcolor = arcade.csscolor.RED
         self.fourierDb = librosa.amplitude_to_db(self.fourier)
-        self.formatedFourier = []
-        for i in range(0,1025):
-            sums = [0]
-            for j in range(0, len(self.fourier[i])):
-                sums.append(sums[-1]+self.fourier[i][j])
-            self.formatedFourier.append(sums)
+        #self.formatedFourier = []
+        # for i in range(0,1025):
+        #    sums = [0]
+        #    for j in range(0, len(self.fourier[i])):
+        #        sums.append(sums[-1]+self.fourier[i][j])
+        #    self.formatedFourier.append(sums)
         self.shape = "circ"
         print("__init__ finished ... took " + str(time()-start) + "seconds")
         print("fourier length: " + str(len(self.fourierDb[0])))
@@ -80,8 +82,8 @@ class MyGame(arcade.Window):
         for i in range(1, 1025):
             x1 = self.width*i/1025
             x2 = self.width*(i+1)/1025
-            y1 = int((self.fourier[i-1][int(pos/200)+1])*self.height/100)
-            y2 = int((self.fourier[i][int(pos/200)+1])*self.height/100)
+            y1 = int(((self.fourierDb[i-1][int(pos/200)+1])*self.height/200)+150)
+            y2 = int(((self.fourierDb[i][int(pos/200)+1])*self.height/200)+150)
             #y1 = int(self.formatedFourier[i-1][int(pos/200)+1])
             #y2 = int(self.formatedFourier[i][int(pos/200)])
             arcade.draw_line(x1, y1, x2, y2, arcade.csscolor.YELLOW, 1)
@@ -103,7 +105,7 @@ class MyGame(arcade.Window):
         if (button == arcade.MOUSE_BUTTON_MIDDLE):  # mousewheel
             pass
         if (button == arcade.MOUSE_BUTTON_RIGHT):  # RMB
-            self.shape = random.choice(["circ", "rect"])
+            pass
         return super().on_mouse_press(x, y, button, modifiers)
 
     def on_key_release(self, symbol: int, modifiers: int):
