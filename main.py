@@ -1,11 +1,14 @@
 import random
+import sys
+from time import time
 import arcade
+from librosa.util.utils import frame
 import numpy as np
 import librosa
 from scipy.signal import savgol_filter
 
 SCREEN_WIDTH = 1080
-SCREEN_HEIGHT = 720
+SCREEN_HEIGHT = 600
 SCREEN_TITLE = "Audio Visualizer"
 
 
@@ -17,28 +20,37 @@ class MyGame(arcade.Window):
     def __init__(self):
 
         # Call the parent class and set up the window
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-
+        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, update_rate=1/20)
+        start = time()
+        soundfile = sys.argv[1]
+        if not soundfile:
+            soundfile = "sound.wav"
         arcade.set_background_color(arcade.csscolor.BLACK)
-        self.music = arcade.Sound("sound.wav")
-        AUDIO_TIME_SERIES, SAMPLING_RATE = librosa.load("./sound.wav")
-        self.fourier = librosa.stft(AUDIO_TIME_SERIES, win_length=2001)
+        self.music = arcade.Sound(soundfile)
+        AUDIO_TIME_SERIES, SAMPLING_RATE = librosa.load(soundfile, sr=48000)
+        self.fourier = np.abs(librosa.stft(
+            AUDIO_TIME_SERIES, win_length=int(SAMPLING_RATE/60)))
         self.wav = AUDIO_TIME_SERIES
         self.sr = SAMPLING_RATE
         self.smoothWave = savgol_filter(
             abs(AUDIO_TIME_SERIES), window_length=2001, polyorder=3)*2
-        self.sc = librosa.feature.spectral_centroid(
-            y=AUDIO_TIME_SERIES, sr=SAMPLING_RATE)
-        self.player = self.music.play(volume=0.5)
+
         self.rectcolor = arcade.csscolor.LIME
         self.circcolor = arcade.csscolor.RED
-        self.fourierDb = librosa.amplitude_to_db(abs(self.fourier))
+        self.fourierDb = librosa.amplitude_to_db(self.fourier)
+        self.formatedFourier = []
+        for i in range(0,1025):
+            sums = [0]
+            for j in range(0, len(self.fourier[i])):
+                sums.append(sums[-1]+self.fourier[i][j])
+            self.formatedFourier.append(sums)
         self.shape = "circ"
-        print("__init__ finished")
-        print("fourier length:")
-        print(len(self.fourier))
-        print("track length:")
-        print(len(self.sc[0]))
+        print("__init__ finished ... took " + str(time()-start) + "seconds")
+        print("fourier length: " + str(len(self.fourierDb[0])))
+        print("fourier amount: " + str(len(self.fourierDb)))
+        print("track length: " + str(len(self.wav)))
+        print("sampling rate: " + str(SAMPLING_RATE))
+        self.player = self.music.play(volume=0.5)
 
     def setup(self):
         """Set up the game here. Call this function to restart the game."""
@@ -47,8 +59,8 @@ class MyGame(arcade.Window):
     def on_draw(self):
         """Render the screen."""
         arcade.start_render()
-        pos = int(
-            self.music.get_stream_position(self.player)*self.sr)
+        streampos = self.music.get_stream_position(self.player)
+        pos = int(streampos*self.sr)
         progress = int((self.music.get_stream_position(
             self.player)/self.music.source.duration)*self.width)
         if (self.shape == "rect"):
@@ -64,7 +76,15 @@ class MyGame(arcade.Window):
                 self.shape = "rect"
 
         arcade.draw_rectangle_filled(
-            0, 10, progress, 20, arcade.csscolor.GREEN)
+            0, 10, progress*2, 20, arcade.csscolor.GREEN)
+        for i in range(1, 1025):
+            x1 = self.width*i/1025
+            x2 = self.width*(i+1)/1025
+            y1 = int((self.fourier[i-1][int(pos/200)+1])*self.height/100)
+            y2 = int((self.fourier[i][int(pos/200)+1])*self.height/100)
+            #y1 = int(self.formatedFourier[i-1][int(pos/200)+1])
+            #y2 = int(self.formatedFourier[i][int(pos/200)])
+            arcade.draw_line(x1, y1, x2, y2, arcade.csscolor.YELLOW, 1)
         arcade.finish_render()
         if (self.music.is_complete(self.player)):
             self.close()
