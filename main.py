@@ -6,11 +6,14 @@ from librosa.util.utils import frame
 import numpy as np
 import librosa
 from scipy.signal import savgol_filter
+import colorsys
 
 SCREEN_WIDTH = 1080
 SCREEN_HEIGHT = 600
 SCREEN_TITLE = "Audio Visualizer"
 
+def hsv2rgb(h,s,v):
+    return tuple(round(i * 255) for i in colorsys.hsv_to_rgb(h,s,v))
 
 class MyGame(arcade.Window):
     """
@@ -20,7 +23,7 @@ class MyGame(arcade.Window):
     def __init__(self):
 
         # Call the parent class and set up the window
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, update_rate=1/20)
+        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, update_rate=1/20, resizable=True)
         start = time()
         soundfile = ""
         if len(sys.argv) < 2:
@@ -40,12 +43,6 @@ class MyGame(arcade.Window):
         self.rectcolor = arcade.csscolor.LIME
         self.circcolor = arcade.csscolor.RED
         self.fourierDb = librosa.amplitude_to_db(self.fourier)
-        #self.formatedFourier = []
-        # for i in range(0,1025):
-        #    sums = [0]
-        #    for j in range(0, len(self.fourier[i])):
-        #        sums.append(sums[-1]+self.fourier[i][j])
-        #    self.formatedFourier.append(sums)
         self.shape = "circ"
         print("__init__ finished ... took " + str(time()-start) + "seconds")
         print("fourier length: " + str(len(self.fourierDb[0])))
@@ -70,7 +67,7 @@ class MyGame(arcade.Window):
                 self.smoothWave[pos])*self.width/2, 20, self.rectcolor)
         elif (self.shape == "circ"):
             arcade.draw_circle_filled(
-                self.width/2, self.height/2, self.smoothWave[pos]*100, self.circcolor)
+                self.width/2, self.height/2, self.smoothWave[pos]*100*self.width*self.height/(600*1080), self.circcolor)
         if (self.smoothWave[pos] > 0.5):
             if (self.shape == "rect"):
                 self.shape = "circ"
@@ -84,11 +81,10 @@ class MyGame(arcade.Window):
             x2 = self.width*(i+1)/1025
             y1 = int(((self.fourierDb[i-1][int(pos/200)+1])*self.height/200)+150)
             y2 = int(((self.fourierDb[i][int(pos/200)+1])*self.height/200)+150)
-            #y1 = int(self.formatedFourier[i-1][int(pos/200)+1])
-            #y2 = int(self.formatedFourier[i][int(pos/200)])
-            arcade.draw_line(x1, y1, x2, y2, arcade.csscolor.YELLOW, 1)
+            arcade.draw_line(x1, y1, x2, y2, hsv2rgb(i/1024,1,0.5), 1)
         arcade.finish_render()
         if (self.music.is_complete(self.player)):
+            arcade.sound.stop_sound(self.player)
             self.close()
         # Code to draw the screen goes here
 
@@ -108,13 +104,13 @@ class MyGame(arcade.Window):
             pass
         return super().on_mouse_press(x, y, button, modifiers)
 
-    def on_key_release(self, symbol: int, modifiers: int):
-        if (symbol == "p"):
+    def on_key_press(self, symbol: int, modifiers: int):
+        if (symbol == 112):
             if (self.player.playing):
                 self.player.pause()
             else:
                 self.player.play()
-        return super().on_key_release(symbol, modifiers)
+        return super().on_key_press(symbol, modifiers)
 
     def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int):
         volume = self.music.get_volume(self.player)
