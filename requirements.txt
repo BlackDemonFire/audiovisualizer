@@ -1,5 +1,5 @@
 appdirs==1.4.4
-arcade==2.6.3
+arcade==2.6.9
 attrs==21.4.0
 audioread==2.1.9
 autopep8==1.6.0
