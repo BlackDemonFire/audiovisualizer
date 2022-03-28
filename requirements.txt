@@ -1,5 +1,5 @@
 arcade==2.6.13
 autopep8==1.6.0
-librosa==0.8.1
+librosa==0.9.1
 numpy==1.22.3
 scipy==1.8.0
